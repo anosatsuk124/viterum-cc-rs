@@ -14,26 +14,124 @@ fn strtou32<T: Iterator<Item = char>>(iter: &mut Peekable<T>, dig: u32) -> u32 {
     return val;
 }
 
+#[derive(PartialEq, Eq, Clone, Debug)]
+enum TokenKind {
+    TkReserved, // symbol
+    TkNum,      // integer token
+    TkBgn,      // begin token
+    TkEOF,      // end token
+}
+
+#[derive(Clone, Debug)]
+struct Token {
+    kind: TokenKind,
+    next: Vec<Token>,
+    val: Option<u32>,
+    op: Option<char>,
+}
+
+impl Token {
+    fn new(kind: TokenKind, cur: &mut Vec<Token>, val: Option<u32>, op: Option<char>) -> Vec<Self> {
+        let mut token = Token {
+            kind: kind,
+            next: cur.to_vec(),
+            val: val,
+            op: op,
+        };
+
+        cur.push(token);
+        return cur.clone();
+    }
+
+    fn tokenize(pos: Vec<char>) -> Vec<Token> {
+        let mut p = pos.into_iter().peekable();
+        let mut cur = Token::new(TokenKind::TkBgn, &mut Vec::new(), None, None);
+        cur.pop();
+
+        while let Some(c) = p.peek() {
+            match c {
+                sp if sp.is_whitespace() => {
+                    p.next();
+                    continue;
+                }
+                '+' | '-' => {
+                    cur = Token::new(TokenKind::TkReserved, &mut cur, None, Some(c.clone()));
+                    p.next();
+                    continue;
+                }
+                '0'..='9' => {
+                    if let Some(v) = c.to_digit(10) {
+                        cur = Token::new(
+                            TokenKind::TkNum,
+                            &mut cur,
+                            Some(strtou32(&mut p, 10)),
+                            None,
+                        );
+                    }
+                    continue;
+                }
+                _ => panic!("Could not tokenize"),
+            }
+        }
+        cur = Token::new(TokenKind::TkEOF, &mut cur, None, None);
+        return cur.into_iter().rev().collect();
+    }
+}
+
+fn consume(token: &mut Vec<Token>, op: char) -> bool {
+    if token[token.len() - 1].kind != TokenKind::TkReserved || token[token.len() - 1].op != Some(op)
+    {
+        return false;
+    }
+
+    token.pop();
+    return true;
+}
+
+fn expect(token: &mut Vec<Token>, op: char) -> &mut Vec<Token> {
+    if token[token.len() - 1].kind != TokenKind::TkReserved || token[token.len() - 1].op != Some(op)
+    {
+        panic!("it is not ~.");
+    }
+    token.pop();
+
+    return token;
+}
+
+fn expect_number(token: &mut Vec<Token>) -> (Option<u32>, &mut Vec<Token>) {
+    if token[token.len() - 1].kind != TokenKind::TkNum {
+        panic!("it is not a number.");
+    }
+
+    return (token.pop().unwrap().val, token);
+}
+
+fn at_eof(token: &Vec<Token>) -> bool {
+    token[token.len() - 1].kind == TokenKind::TkEOF
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     if args.len() != 2 {
-        eprintln!("The number of arguments are not collect.");
+        eprintln!("The number of arguments is not correct.");
         std::process::exit(1)
     }
 
-    let mut expr = args[1].chars().peekable();
-
+    let mut token = Token::tokenize(args[1].chars().collect());
     println!(".intel_syntax noprefix");
     println!(".globl main");
     println!("main:");
-    println!("  mov rax, {}", strtou32(&mut expr, 10));
+    println!("  mov rax, {}", expect_number(&mut token).0.unwrap());
 
-    while let Some(c) = expr.next() {
-        match c {
-            '+' => println!("  add rax, {}", strtou32(&mut expr, 10)),
-            '-' => println!("  sub rax, {}", strtou32(&mut expr, 10)),
-            _ => eprintln!("Invalid charactor: '{}'", c),
+    while !(at_eof(&token)) {
+        if consume(&mut token, '+') {
+            println!("  add rax, {}", expect_number(&mut token).0.unwrap());
+            continue;
+        } else if consume(&mut token, '-') {
+            println!("  sub rax, {}", expect_number(&mut token).0.unwrap());
+            continue;
         }
     }
+
     println!("  ret");
 }
