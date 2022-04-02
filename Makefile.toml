@@ -10,6 +10,7 @@ dependencies = [ "build" ]
 
 [tasks.clean]
 script_runner = "@shell"
-script = """
-    rm -rf ./tmp
-"""
+script = [
+    "cargo clean",
+    "rm -rf ./tmp"
+]

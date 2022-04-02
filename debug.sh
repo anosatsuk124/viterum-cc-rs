@@ -4,9 +4,11 @@ assert() {
     expected="$1"
     input="$2"
 
-    mkdir ./tmp
+    if [ ! -d ./tmp ]; then
+        mkdir ./tmp
+    fi
 
-    cargo run -- "$input" > ./tmp/tmp.S
+    cargo run --release -- "$input" > ./tmp/tmp.S
     cc -o ./tmp/tmp ./tmp/tmp.S
     ./tmp/tmp
     actual="$?"
