@@ -1,0 +1,15 @@
+[config]
+skip_core_tasks = true
+
+[tasks.build]
+script = "cargo build --release"
+
+[tasks.test]
+script = "./debug.sh"
+dependencies = [ "build" ]
+
+[tasks.clean]
+script_runner = "@shell"
+script = """
+    rm -rf ./tmp
+"""
