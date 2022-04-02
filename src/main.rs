@@ -4,7 +4,7 @@ fn main() {
         std::process::exit(1)
     }
     println!(".intel_syntax noprefix");
-    println!(".global main");
+    println!(".globl main");
     println!("main:");
     println!(
         "  mov rax, {}",
