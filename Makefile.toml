@@ -2,11 +2,40 @@
 skip_core_tasks = true
 
 [tasks.build]
-script = "cargo build --release"
+script_runner = "@shell"
+script = """
+    if [ ! -d ./tmp ]; then
+        mkdir ./tmp
+    fi
+
+    cargo run --release $2 > ./tmp/tmp.S
+    cc -o ./tmp/tmp ./tmp/tmp.S
+    """
+
+[tasks.run]
+script = "cargo run --release ${@}"
+
+[tasks.build-asm]
+script_runner = "@shell"
+script = """
+    if [ ! -d ./asm/target ]; then
+        mkdir -p ./asm/target
+    fi
+    cc -o ./asm/target/main ./asm/main.S
+    """
+
+[tasks.run-asm]
+script_runner = "@shell"
+script = "./asm/target/main"
+dependencies = [ "build-asm" ]
 
 [tasks.test]
-script = "./debug.sh"
-dependencies = [ "build" ]
+script_runner = "@shell"
+script = """
+    makers debug 0 0
+    makers debug 42 42
+    makers debug 21 "5+20-4"
+    """
 
 [tasks.clean]
 script_runner = "@shell"
@@ -14,3 +43,7 @@ script = [
     "cargo clean",
     "rm -rf ./tmp"
 ]
+
+[tasks.debug]
+script = "./debug.sh ${@}"
+dependencies = [ "build" ]
