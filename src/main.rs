@@ -18,7 +18,6 @@ fn strtou32<T: Iterator<Item = char>>(iter: &mut Peekable<T>, dig: u32) -> u32 {
 enum TokenKind {
     TkReserved, // symbol
     TkNum,      // integer token
-    TkBgn,      // begin token
     TkEOF,      // end token
 }
 
@@ -32,11 +31,11 @@ struct Token {
 
 impl Token {
     fn new(kind: TokenKind, cur: &mut Vec<Token>, val: Option<u32>, op: Option<char>) -> Vec<Self> {
-        let mut token = Token {
-            kind: kind,
+        let token = Token {
+            kind,
             next: cur.to_vec(),
-            val: val,
-            op: op,
+            val,
+            op,
         };
 
         cur.push(token);
@@ -45,7 +44,7 @@ impl Token {
 
     fn tokenize(pos: Vec<char>) -> Vec<Token> {
         let mut p = pos.into_iter().peekable();
-        let mut cur = Token::new(TokenKind::TkBgn, &mut Vec::new(), None, None);
+        let mut cur = Token::new(TokenKind::TkEOF, &mut Vec::new(), None, None);
         cur.pop();
 
         while let Some(c) = p.peek() {
@@ -60,14 +59,7 @@ impl Token {
                     continue;
                 }
                 '0'..='9' => {
-                    if let Some(v) = c.to_digit(10) {
-                        cur = Token::new(
-                            TokenKind::TkNum,
-                            &mut cur,
-                            Some(strtou32(&mut p, 10)),
-                            None,
-                        );
-                    }
+                    cur = Token::new(TokenKind::TkNum, &mut cur, Some(strtou32(&mut p, 10)), None);
                     continue;
                 }
                 _ => panic!("Could not tokenize"),
@@ -86,16 +78,6 @@ fn consume(token: &mut Vec<Token>, op: char) -> bool {
 
     token.pop();
     return true;
-}
-
-fn expect(token: &mut Vec<Token>, op: char) -> &mut Vec<Token> {
-    if token[token.len() - 1].kind != TokenKind::TkReserved || token[token.len() - 1].op != Some(op)
-    {
-        panic!("it is not ~.");
-    }
-    token.pop();
-
-    return token;
 }
 
 fn expect_number(token: &mut Vec<Token>) -> (Option<u32>, &mut Vec<Token>) {
