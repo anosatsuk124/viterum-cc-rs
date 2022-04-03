@@ -45,5 +45,5 @@ script = [
 ]
 
 [tasks.debug]
-script = './debug.sh ${@}'
+script = './debug.sh "${@}"'
 dependencies = [ "build" ]
