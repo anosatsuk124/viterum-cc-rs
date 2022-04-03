@@ -24,28 +24,21 @@ enum TokenKind {
 #[derive(Clone, Debug)]
 struct Token {
     kind: TokenKind,
-    next: Vec<Token>,
     val: Option<u32>,
     op: Option<char>,
 }
 
 impl Token {
-    fn new(kind: TokenKind, cur: &mut Vec<Token>, val: Option<u32>, op: Option<char>) -> Vec<Self> {
-        let token = Token {
-            kind,
-            next: cur.to_vec(),
-            val,
-            op,
-        };
+    fn push(kind: TokenKind, val: Option<u32>, op: Option<char>, vec: &mut Vec<Self>) -> Vec<Self> {
+        let token = Token { kind, val, op };
+        vec.push(token);
 
-        cur.push(token);
-        return cur.clone();
+        vec.clone()
     }
 
     fn tokenize(pos: Vec<char>) -> Vec<Token> {
         let mut p = pos.into_iter().peekable();
-        let mut cur = Token::new(TokenKind::TkEOF, &mut Vec::new(), None, None);
-        cur.pop();
+        let mut cur: Vec<Token> = Vec::new();
 
         while let Some(c) = p.peek() {
             match c {
@@ -54,18 +47,18 @@ impl Token {
                     continue;
                 }
                 '+' | '-' => {
-                    cur = Token::new(TokenKind::TkReserved, &mut cur, None, Some(c.clone()));
+                    cur = Token::push(TokenKind::TkReserved, None, Some(c.clone()), &mut cur);
                     p.next();
                     continue;
                 }
                 '0'..='9' => {
-                    cur = Token::new(TokenKind::TkNum, &mut cur, Some(strtou32(&mut p, 10)), None);
+                    cur = Token::push(TokenKind::TkNum, Some(strtou32(&mut p, 10)), None, &mut cur);
                     continue;
                 }
                 _ => panic!("Could not tokenize"),
             }
         }
-        cur = Token::new(TokenKind::TkEOF, &mut cur, None, None);
+        cur = Token::push(TokenKind::TkEOF, None, None, &mut cur);
         return cur.into_iter().rev().collect();
     }
 }
