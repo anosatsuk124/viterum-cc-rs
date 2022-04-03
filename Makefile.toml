@@ -13,7 +13,10 @@ script = """
     """
 
 [tasks.run]
-script = "cargo run --release ${@}"
+script_runner = "@shell"
+script = """
+    cargo run --release "${@}"
+    """
 
 [tasks.build-asm]
 script_runner = "@shell"
