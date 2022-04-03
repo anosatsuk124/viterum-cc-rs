@@ -80,12 +80,12 @@ fn consume(token: &mut Vec<Token>, op: char) -> bool {
     return true;
 }
 
-fn expect_number(token: &mut Vec<Token>) -> (Option<u32>, &mut Vec<Token>) {
+fn expect_number(token: &mut Vec<Token>) -> Option<u32> {
     if token[token.len() - 1].kind != TokenKind::TkNum {
         panic!("it is not a number.");
     }
 
-    return (token.pop().unwrap().val, token);
+    token.pop().unwrap().val
 }
 
 fn at_eof(token: &Vec<Token>) -> bool {
@@ -103,14 +103,14 @@ fn main() {
     println!(".intel_syntax noprefix");
     println!(".globl main");
     println!("main:");
-    println!("  mov rax, {}", expect_number(&mut token).0.unwrap());
+    println!("  mov rax, {}", expect_number(&mut token).unwrap());
 
     while !(at_eof(&token)) {
         if consume(&mut token, '+') {
-            println!("  add rax, {}", expect_number(&mut token).0.unwrap());
+            println!("  add rax, {}", expect_number(&mut token).unwrap());
             continue;
         } else if consume(&mut token, '-') {
-            println!("  sub rax, {}", expect_number(&mut token).0.unwrap());
+            println!("  sub rax, {}", expect_number(&mut token).unwrap());
             continue;
         }
     }
