@@ -53,7 +53,7 @@ impl Token {
                     continue;
                 }
                 asc if asc.is_ascii_alphabetic() => {
-                    let mut var = c.to_string().clone();
+                    let var = c.to_string().clone();
                     p.next();
                     cur = Token::push(TokenKind::TkIdent, None, Some(var), &mut cur);
 
