@@ -1,14 +1,25 @@
+use std::io::BufRead;
+
 mod generator;
 mod parser;
 mod tokenizer;
 
 fn main() {
-    let args: Vec<String> = std::env::args().collect();
-    if args.len() != 2 {
-        panic!("The number of arguments is not correct.");
+    let mut stdin = std::io::BufReader::new(std::io::stdin());
+
+    let mut input = String::new();
+    loop {
+        match stdin.read_line(&mut input) {
+            Ok(0) => break,
+            Ok(_) => continue,
+            Err(e) => {
+                eprintln!("{}", e);
+                break;
+            }
+        }
     }
 
-    let mut tokens = tokenizer::Token::tokenize(args[1].chars().collect());
+    let mut tokens = tokenizer::Token::tokenize(input.chars().collect());
     let nodes = parser::program(&mut tokens);
 
     println!(".intel_syntax noprefix");

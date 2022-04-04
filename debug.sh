@@ -2,6 +2,14 @@
 expected="$1"
 input="$2"
 
+if [ ! -d ./tmp ]; then
+    mkdir ./tmp
+fi
+
+echo "$input" | ./target/release/viterum-cc-rs > ./tmp/tmp.S
+
+cc -o ./tmp/tmp ./tmp/tmp.S
+
 ./tmp/tmp
 actual="$?"
 
