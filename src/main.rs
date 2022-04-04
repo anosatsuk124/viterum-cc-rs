@@ -9,14 +9,25 @@ fn main() {
     }
 
     let mut tokens = tokenizer::Token::tokenize(args[1].chars().collect());
-    let node = parser::expr(&mut tokens);
+    let nodes = parser::program(&mut tokens);
 
     println!(".intel_syntax noprefix");
     println!(".globl main");
     println!("main:");
 
-    generator::generator(node);
+    // prologue
+    println!("  push rbp");
+    println!("  mov rbp, rsp");
+    println!("  sub rsp, 208");
 
-    println!("  pop rax");
+    for node in nodes.into_iter() {
+        generator::generator(node);
+
+        println!("  pop rax");
+    }
+
+    // epilogue
+    println!("  mov rsp, rbp");
+    println!("  pop rbp");
     println!("  ret");
 }

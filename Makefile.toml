@@ -51,6 +51,7 @@ script = """
     makers debug 4 "-2+6"
     makers debug 1 "5==4+3 -2"
     makers debug 0 "2>3"
+    makers debug 20 "x=8;y=2*6;x+y;"
     """
 
 [tasks.clean]

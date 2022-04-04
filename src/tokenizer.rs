@@ -18,7 +18,8 @@ fn strtou32<T: Iterator<Item = char>>(iter: &mut Peekable<T>, dig: u32) -> u32 {
 enum TokenKind {
     TkReserved, // symbol
     TkNum,      // integer token
-    TkEOF,      // end token
+    TkIdent,
+    TkEOF, // end token
 }
 
 #[derive(Clone, Debug)]
@@ -51,6 +52,13 @@ impl Token {
                     p.next();
                     continue;
                 }
+                asc if asc.is_ascii_alphabetic() => {
+                    let mut var = c.to_string().clone();
+                    p.next();
+                    cur = Token::push(TokenKind::TkIdent, None, Some(var), &mut cur);
+
+                    continue;
+                }
                 '+' | '-' | '*' | '/' | '(' | ')' => {
                     cur = Token::push(
                         TokenKind::TkReserved,
@@ -64,11 +72,23 @@ impl Token {
                 '=' | '!' | '<' | '>' => {
                     let mut op = c.to_string();
                     p.next();
-                    if let Some('=') = p.peek() {
-                        op.push('=');
+                    if Some(&'=') == p.peek() {
                         p.next();
+                        op.push('=');
+                        cur = Token::push(TokenKind::TkReserved, None, Some(op.clone()), &mut cur);
+                    } else {
+                        cur = Token::push(TokenKind::TkReserved, None, Some(op.clone()), &mut cur);
                     }
-                    cur = Token::push(TokenKind::TkReserved, None, Some(op), &mut cur);
+                    continue;
+                }
+                ';' => {
+                    cur = Token::push(
+                        TokenKind::TkReserved,
+                        None,
+                        Some(c.to_string().clone()),
+                        &mut cur,
+                    );
+                    p.next();
                     continue;
                 }
                 '0'..='9' => {
@@ -81,6 +101,14 @@ impl Token {
         cur = Token::push(TokenKind::TkEOF, None, None, &mut cur);
         return cur.into_iter().rev().collect();
     }
+}
+
+pub fn consume_ident(tokens: &mut Vec<Token>) -> (bool, Option<String>) {
+    if tokens[tokens.len() - 1].kind != TokenKind::TkIdent {
+        return (false, None);
+    }
+
+    (true, tokens.pop().unwrap().op)
 }
 
 pub fn consume(tokens: &mut Vec<Token>, op: &str) -> bool {
@@ -111,6 +139,6 @@ pub fn expect(tokens: &mut Vec<Token>, op: &str) {
     tokens.pop();
 }
 
-fn at_eof(token: &Vec<Token>) -> bool {
-    token[token.len() - 1].kind == TokenKind::TkEOF
+pub fn at_eof(tokens: &Vec<Token>) -> bool {
+    tokens[tokens.len() - 1].kind == TokenKind::TkEOF
 }
