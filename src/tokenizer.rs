@@ -22,7 +22,7 @@ enum TokenKind {
 }
 
 #[derive(Clone, Debug)]
-struct Token {
+pub struct Token {
     kind: TokenKind,
     val: Option<u32>,
     op: Option<char>,
@@ -36,7 +36,7 @@ impl Token {
         vec.clone()
     }
 
-    fn tokenize(pos: Vec<char>) -> Vec<Token> {
+    pub fn tokenize(pos: Vec<char>) -> Vec<Token> {
         let mut p = pos.into_iter().peekable();
         let mut cur: Vec<Token> = Vec::new();
 
@@ -46,7 +46,7 @@ impl Token {
                     p.next();
                     continue;
                 }
-                '+' | '-' => {
+                '+' | '-' | '*' | '/' | '(' | ')' => {
                     cur = Token::push(TokenKind::TkReserved, None, Some(c.clone()), &mut cur);
                     p.next();
                     continue;
@@ -63,27 +63,39 @@ impl Token {
     }
 }
 
-fn consume(token: &mut Vec<Token>, op: char) -> bool {
-    if token[token.len() - 1].kind != TokenKind::TkReserved || token[token.len() - 1].op != Some(op)
+pub fn consume(tokens: &mut Vec<Token>, op: char) -> bool {
+    if tokens[tokens.len() - 1].kind != TokenKind::TkReserved
+        || tokens[tokens.len() - 1].op != Some(op)
     {
         return false;
     }
 
-    token.pop();
+    tokens.pop();
     return true;
 }
 
-fn expect_number(token: &mut Vec<Token>) -> Option<u32> {
-    if token[token.len() - 1].kind != TokenKind::TkNum {
+pub fn expect_number(tokens: &mut Vec<Token>) -> Option<u32> {
+    if tokens[tokens.len() - 1].kind != TokenKind::TkNum {
         panic!("it is not a number.");
     }
 
-    token.pop().unwrap().val
+    tokens.pop().unwrap().val
+}
+
+pub fn expect(tokens: &mut Vec<Token>, op: char) {
+    if tokens[tokens.len() - 1].kind != TokenKind::TkReserved
+        || tokens[tokens.len() - 1].op != Some(op)
+    {
+        panic!("it is not ~.");
+    }
+    tokens.pop();
 }
 
 fn at_eof(token: &Vec<Token>) -> bool {
     token[token.len() - 1].kind == TokenKind::TkEOF
 }
+
+/*
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -110,3 +122,5 @@ fn main() {
 
     println!("  ret");
 }
+
+*/

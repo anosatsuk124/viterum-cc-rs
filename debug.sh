@@ -10,6 +10,6 @@ if [ "$actual" = "$expected" ]; then
     echo OK
     exit 0
 else
-    echo "$input => $expected expected, but got $actual"
+    echo "$input => expected $expected , but got $actual"
     exit 1
 fi
