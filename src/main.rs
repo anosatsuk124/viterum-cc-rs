@@ -1,17 +1,18 @@
-use tokenizer::{consume, expect, expect_number};
-
-use crate::tokenizer::Token;
-
 mod tokenizer;
+use crate::tokenizer::Token;
+use tokenizer::{consume, expect, expect_number};
 
 #[derive(Debug, Clone, PartialEq)]
 enum NodeKind {
-    NdAdd, // +
-    NdSub, // -
-    NdMul, // *
-    NdDiv, // /
-    NdNum, // integer
-    NdExpr,
+    NdAdd,    // +
+    NdSub,    // -
+    NdMul,    // *
+    NdDiv,    // /
+    NdNum,    // integer
+    NdEq,     // equality
+    NdNotEq,  // equality
+    NdLess,   // relational
+    NdLessEq, // relational
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -39,23 +40,89 @@ impl Node {
 }
 
 fn expr(tokens: &mut Vec<tokenizer::Token>) -> Node {
-    let mut node: Node = *mul(tokens);
+    *equality(tokens)
+}
+
+fn equality(tokens: &mut Vec<tokenizer::Token>) -> Box<Node> {
+    let mut node: Box<Node> = relational(tokens);
 
     loop {
-        if consume(tokens, '+') {
-            node = Node::new(
+        if consume(tokens, "==") {
+            node = Box::new(Node::new(
+                NodeKind::NdEq,
+                Some(node),
+                Some(relational(tokens)),
+                None,
+            ));
+        } else if consume(tokens, "!=") {
+            node = Box::new(Node::new(
+                NodeKind::NdNotEq,
+                Some(node),
+                Some(relational(tokens)),
+                None,
+            ));
+        } else {
+            return node.clone();
+        }
+    }
+}
+
+fn relational(tokens: &mut Vec<tokenizer::Token>) -> Box<Node> {
+    let mut node: Box<Node> = add(tokens);
+
+    loop {
+        if consume(tokens, "<") {
+            node = Box::new(Node::new(
+                NodeKind::NdLess,
+                Some(node),
+                Some(add(tokens)),
+                None,
+            ));
+        } else if consume(tokens, "<=") {
+            node = Box::new(Node::new(
+                NodeKind::NdLessEq,
+                Some(node),
+                Some(add(tokens)),
+                None,
+            ));
+        } else if consume(tokens, ">") {
+            node = Box::new(Node::new(
+                NodeKind::NdLess,
+                Some(add(tokens)),
+                Some(node),
+                None,
+            ));
+        } else if consume(tokens, ">=") {
+            node = Box::new(Node::new(
+                NodeKind::NdLessEq,
+                Some(add(tokens)),
+                Some(node),
+                None,
+            ));
+        } else {
+            return node.clone();
+        }
+    }
+}
+
+fn add(tokens: &mut Vec<tokenizer::Token>) -> Box<Node> {
+    let mut node: Box<Node> = mul(tokens);
+
+    loop {
+        if consume(tokens, "+") {
+            node = Box::new(Node::new(
                 NodeKind::NdAdd,
-                Some(Box::new(node)),
+                Some(node),
                 Some(mul(tokens)),
                 None,
-            );
-        } else if consume(tokens, '-') {
-            node = Node::new(
+            ));
+        } else if consume(tokens, "-") {
+            node = Box::new(Node::new(
                 NodeKind::NdSub,
-                Some(Box::new(node)),
+                Some(node),
                 Some(mul(tokens)),
                 None,
-            );
+            ));
         } else {
             return node.clone();
         }
@@ -63,21 +130,21 @@ fn expr(tokens: &mut Vec<tokenizer::Token>) -> Node {
 }
 
 fn mul(tokens: &mut Vec<tokenizer::Token>) -> Box<Node> {
-    let mut node: Box<Node> = primary(tokens);
+    let mut node: Box<Node> = unary(tokens);
 
     loop {
-        if consume(tokens, '*') {
+        if consume(tokens, "*") {
             node = Box::new(Node::new(
                 NodeKind::NdMul,
                 Some(node),
-                Some(primary(tokens)),
+                Some(unary(tokens)),
                 None,
             ));
-        } else if consume(tokens, '/') {
+        } else if consume(tokens, "/") {
             node = Box::new(Node::new(
                 NodeKind::NdDiv,
                 Some(node),
-                Some(primary(tokens)),
+                Some(unary(tokens)),
                 None,
             ));
         } else {
@@ -86,10 +153,26 @@ fn mul(tokens: &mut Vec<tokenizer::Token>) -> Box<Node> {
     }
 }
 
+fn unary(tokens: &mut Vec<tokenizer::Token>) -> Box<Node> {
+    if consume(tokens, "+") {
+        return primary(tokens);
+    }
+    if consume(tokens, "-") {
+        return Box::new(Node::new(
+            NodeKind::NdSub,
+            Some(Box::new(Node::new(NodeKind::NdNum, None, None, Some(0)))),
+            Some(primary(tokens)),
+            None,
+        ));
+    }
+
+    primary(tokens)
+}
+
 fn primary(tokens: &mut Vec<tokenizer::Token>) -> Box<Node> {
-    if consume(tokens, '(') {
+    if consume(tokens, "(") {
         let node = expr(tokens);
-        expect(tokens, ')');
+        expect(tokens, ")");
 
         return Box::new(node);
     }
@@ -119,6 +202,26 @@ fn gen(node: Node) {
     println!("  pop rax");
 
     match node.kind {
+        NodeKind::NdEq => {
+            println!("  cmp rax, rdi");
+            println!("  sete al");
+            println!("  movzb rax, al");
+        }
+        NodeKind::NdNotEq => {
+            println!("  cmp rax, rdi");
+            println!("  setne al");
+            println!("  movzb rax, al");
+        }
+        NodeKind::NdLess => {
+            println!("  cmp rax, rdi");
+            println!("  setl al");
+            println!("  movzb rax, al");
+        }
+        NodeKind::NdLessEq => {
+            println!("  cmp rax, rdi");
+            println!("  setle al");
+            println!("  movzb rax, al");
+        }
         NodeKind::NdAdd => {
             println!("  add rax, rdi");
         }

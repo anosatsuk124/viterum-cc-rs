@@ -25,11 +25,16 @@ enum TokenKind {
 pub struct Token {
     kind: TokenKind,
     val: Option<u32>,
-    op: Option<char>,
+    op: Option<String>,
 }
 
 impl Token {
-    fn push(kind: TokenKind, val: Option<u32>, op: Option<char>, vec: &mut Vec<Self>) -> Vec<Self> {
+    fn push(
+        kind: TokenKind,
+        val: Option<u32>,
+        op: Option<String>,
+        vec: &mut Vec<Self>,
+    ) -> Vec<Self> {
         let token = Token { kind, val, op };
         vec.push(token);
 
@@ -47,8 +52,23 @@ impl Token {
                     continue;
                 }
                 '+' | '-' | '*' | '/' | '(' | ')' => {
-                    cur = Token::push(TokenKind::TkReserved, None, Some(c.clone()), &mut cur);
+                    cur = Token::push(
+                        TokenKind::TkReserved,
+                        None,
+                        Some(c.clone().to_string()),
+                        &mut cur,
+                    );
                     p.next();
+                    continue;
+                }
+                '=' | '!' | '<' | '>' => {
+                    let mut op = c.to_string();
+                    p.next();
+                    if let Some('=') = p.peek() {
+                        op.push('=');
+                        p.next();
+                    }
+                    cur = Token::push(TokenKind::TkReserved, None, Some(op), &mut cur);
                     continue;
                 }
                 '0'..='9' => {
@@ -63,9 +83,9 @@ impl Token {
     }
 }
 
-pub fn consume(tokens: &mut Vec<Token>, op: char) -> bool {
+pub fn consume(tokens: &mut Vec<Token>, op: &str) -> bool {
     if tokens[tokens.len() - 1].kind != TokenKind::TkReserved
-        || tokens[tokens.len() - 1].op != Some(op)
+        || tokens[tokens.len() - 1].op != Some(op.to_string())
     {
         return false;
     }
@@ -82,9 +102,9 @@ pub fn expect_number(tokens: &mut Vec<Token>) -> Option<u32> {
     tokens.pop().unwrap().val
 }
 
-pub fn expect(tokens: &mut Vec<Token>, op: char) {
+pub fn expect(tokens: &mut Vec<Token>, op: &str) {
     if tokens[tokens.len() - 1].kind != TokenKind::TkReserved
-        || tokens[tokens.len() - 1].op != Some(op)
+        || tokens[tokens.len() - 1].op != Some(op.to_string())
     {
         panic!("it is not ~.");
     }
@@ -94,33 +114,3 @@ pub fn expect(tokens: &mut Vec<Token>, op: char) {
 fn at_eof(token: &Vec<Token>) -> bool {
     token[token.len() - 1].kind == TokenKind::TkEOF
 }
-
-/*
-
-fn main() {
-    let args: Vec<String> = std::env::args().collect();
-    if args.len() != 2 {
-        eprintln!("The number of arguments is not correct.");
-        std::process::exit(1)
-    }
-
-    let mut token = Token::tokenize(args[1].chars().collect());
-    println!(".intel_syntax noprefix");
-    println!(".globl main");
-    println!("main:");
-    println!("  mov rax, {}", expect_number(&mut token).unwrap());
-
-    while !(at_eof(&token)) {
-        if consume(&mut token, '+') {
-            println!("  add rax, {}", expect_number(&mut token).unwrap());
-            continue;
-        } else if consume(&mut token, '-') {
-            println!("  sub rax, {}", expect_number(&mut token).unwrap());
-            continue;
-        }
-    }
-
-    println!("  ret");
-}
-
-*/

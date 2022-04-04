@@ -8,15 +8,22 @@ script = """
         mkdir ./tmp
     fi
 
-    cargo run --release "$2" > ./tmp/tmp.S
+    cargo run --release -- "$2" > ./tmp/tmp.S
     cc -o ./tmp/tmp ./tmp/tmp.S
     """
 
 [tasks.run]
 script_runner = "@shell"
 script = """
-    cargo run --release "${@}"
+    if [ ! -d ./tmp ]; then
+        mkdir ./tmp
+    fi
+
+    cargo run --release -- "${@}" > ./tmp/tmp.S
+    cc -o ./tmp/tmp ./tmp/tmp.S
+    ./tmp/tmp
     """
+ignore_errors = true
 
 [tasks.build-asm]
 script_runner = "@shell"
@@ -41,6 +48,9 @@ script = """
     makers debug 47 "5+6*7"
     makers debug 15 "5*(9-6)"
     makers debug 4 "(3+5)/2"
+    makers debug 4 "-2+6"
+    makers debug 1 "5==4+3 -2"
+    makers debug 0 "2>3"
     """
 
 [tasks.clean]
