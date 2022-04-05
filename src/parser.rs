@@ -42,46 +42,54 @@ impl Node {
     }
 }
 
-/*
-    program    = stmt*
-    stmt       = expr ";"
-    expr       = assign
-    assign     = equality ("=" assign)?
-    equality   = relational ("==" relational | "!=" relational)*
-    relational = add ("<" add | "<=" add | ">" add | ">=" add)*
-    add        = mul ("+" mul | "-" mul)*
-    mul        = unary ("*" unary | "/" unary)*
-    unary      = ("+" | "-")? primary
-    primary    = num | ident | "(" expr ")"
-*/
+#[derive(Clone)]
+pub struct LVar {
+    name: String,
+    offset: u32,
+}
 
-pub fn program(tokens: &mut Vec<Token>) -> Vec<Node> {
+impl LVar {
+    fn new(name: String, offset: u32) -> Self {
+        LVar { name, offset }
+    }
+
+    fn find(name: String, vars: Vec<Self>) -> Option<Self> {
+        for var in vars.into_iter() {
+            if var.name == name {
+                return Some(var.clone());
+            }
+        }
+        None
+    }
+}
+
+pub fn program(tokens: &mut Vec<Token>, vars: &mut Vec<LVar>) -> Vec<Node> {
     let mut stmts: Vec<Node> = Vec::new();
     while !tokenizer::at_eof(tokens) {
-        stmts.push(*stmt(tokens));
+        stmts.push(*stmt(tokens, vars));
     }
 
     stmts
 }
 
-fn stmt(tokens: &mut Vec<Token>) -> Box<Node> {
-    let expr = expr(tokens);
+fn stmt(tokens: &mut Vec<Token>, vars: &mut Vec<LVar>) -> Box<Node> {
+    let expr = expr(tokens, vars);
     consume(tokens, ";");
 
     return expr;
 }
 
-fn expr(tokens: &mut Vec<Token>) -> Box<Node> {
-    assign(tokens)
+fn expr(tokens: &mut Vec<Token>, vars: &mut Vec<LVar>) -> Box<Node> {
+    assign(tokens, vars)
 }
 
-fn assign(tokens: &mut Vec<Token>) -> Box<Node> {
-    let mut node: Box<Node> = equality(tokens);
+fn assign(tokens: &mut Vec<Token>, vars: &mut Vec<LVar>) -> Box<Node> {
+    let mut node: Box<Node> = equality(tokens, vars);
     if consume(tokens, "=") {
         node = Box::new(Node::new(
             NodeKind::NdAssign,
             Some(node),
-            Some(assign(tokens)),
+            Some(assign(tokens, vars)),
             None,
             None,
         ));
@@ -89,15 +97,15 @@ fn assign(tokens: &mut Vec<Token>) -> Box<Node> {
     node
 }
 
-fn equality(tokens: &mut Vec<Token>) -> Box<Node> {
-    let mut node: Box<Node> = relational(tokens);
+fn equality(tokens: &mut Vec<Token>, vars: &mut Vec<LVar>) -> Box<Node> {
+    let mut node: Box<Node> = relational(tokens, vars);
 
     loop {
         if consume(tokens, "==") {
             node = Box::new(Node::new(
                 NodeKind::NdEq,
                 Some(node),
-                Some(relational(tokens)),
+                Some(relational(tokens, vars)),
                 None,
                 None,
             ));
@@ -105,7 +113,7 @@ fn equality(tokens: &mut Vec<Token>) -> Box<Node> {
             node = Box::new(Node::new(
                 NodeKind::NdNotEq,
                 Some(node),
-                Some(relational(tokens)),
+                Some(relational(tokens, vars)),
                 None,
                 None,
             ));
@@ -115,15 +123,15 @@ fn equality(tokens: &mut Vec<Token>) -> Box<Node> {
     }
 }
 
-fn relational(tokens: &mut Vec<Token>) -> Box<Node> {
-    let mut node: Box<Node> = add(tokens);
+fn relational(tokens: &mut Vec<Token>, vars: &mut Vec<LVar>) -> Box<Node> {
+    let mut node: Box<Node> = add(tokens, vars);
 
     loop {
         if consume(tokens, "<") {
             node = Box::new(Node::new(
                 NodeKind::NdLess,
                 Some(node),
-                Some(add(tokens)),
+                Some(add(tokens, vars)),
                 None,
                 None,
             ));
@@ -131,14 +139,14 @@ fn relational(tokens: &mut Vec<Token>) -> Box<Node> {
             node = Box::new(Node::new(
                 NodeKind::NdLessEq,
                 Some(node),
-                Some(add(tokens)),
+                Some(add(tokens, vars)),
                 None,
                 None,
             ));
         } else if consume(tokens, ">") {
             node = Box::new(Node::new(
                 NodeKind::NdLess,
-                Some(add(tokens)),
+                Some(add(tokens, vars)),
                 Some(node),
                 None,
                 None,
@@ -146,7 +154,7 @@ fn relational(tokens: &mut Vec<Token>) -> Box<Node> {
         } else if consume(tokens, ">=") {
             node = Box::new(Node::new(
                 NodeKind::NdLessEq,
-                Some(add(tokens)),
+                Some(add(tokens, vars)),
                 Some(node),
                 None,
                 None,
@@ -157,15 +165,15 @@ fn relational(tokens: &mut Vec<Token>) -> Box<Node> {
     }
 }
 
-fn add(tokens: &mut Vec<Token>) -> Box<Node> {
-    let mut node: Box<Node> = mul(tokens);
+fn add(tokens: &mut Vec<Token>, vars: &mut Vec<LVar>) -> Box<Node> {
+    let mut node: Box<Node> = mul(tokens, vars);
 
     loop {
         if consume(tokens, "+") {
             node = Box::new(Node::new(
                 NodeKind::NdAdd,
                 Some(node),
-                Some(mul(tokens)),
+                Some(mul(tokens, vars)),
                 None,
                 None,
             ));
@@ -173,7 +181,7 @@ fn add(tokens: &mut Vec<Token>) -> Box<Node> {
             node = Box::new(Node::new(
                 NodeKind::NdSub,
                 Some(node),
-                Some(mul(tokens)),
+                Some(mul(tokens, vars)),
                 None,
                 None,
             ));
@@ -183,15 +191,15 @@ fn add(tokens: &mut Vec<Token>) -> Box<Node> {
     }
 }
 
-fn mul(tokens: &mut Vec<Token>) -> Box<Node> {
-    let mut node: Box<Node> = unary(tokens);
+fn mul(tokens: &mut Vec<Token>, vars: &mut Vec<LVar>) -> Box<Node> {
+    let mut node: Box<Node> = unary(tokens, vars);
 
     loop {
         if consume(tokens, "*") {
             node = Box::new(Node::new(
                 NodeKind::NdMul,
                 Some(node),
-                Some(unary(tokens)),
+                Some(unary(tokens, vars)),
                 None,
                 None,
             ));
@@ -199,7 +207,7 @@ fn mul(tokens: &mut Vec<Token>) -> Box<Node> {
             node = Box::new(Node::new(
                 NodeKind::NdDiv,
                 Some(node),
-                Some(unary(tokens)),
+                Some(unary(tokens, vars)),
                 None,
                 None,
             ));
@@ -209,9 +217,9 @@ fn mul(tokens: &mut Vec<Token>) -> Box<Node> {
     }
 }
 
-fn unary(tokens: &mut Vec<Token>) -> Box<Node> {
+fn unary(tokens: &mut Vec<Token>, vars: &mut Vec<LVar>) -> Box<Node> {
     if consume(tokens, "+") {
-        return primary(tokens);
+        return primary(tokens, vars);
     }
     if consume(tokens, "-") {
         return Box::new(Node::new(
@@ -223,29 +231,59 @@ fn unary(tokens: &mut Vec<Token>) -> Box<Node> {
                 Some(0),
                 None,
             ))),
-            Some(primary(tokens)),
+            Some(primary(tokens, vars)),
             None,
             None,
         ));
     }
 
-    primary(tokens)
+    primary(tokens, vars)
 }
 
-fn primary(tokens: &mut Vec<Token>) -> Box<Node> {
+fn primary(tokens: &mut Vec<Token>, vars: &mut Vec<LVar>) -> Box<Node> {
     if consume(tokens, "(") {
-        let node = expr(tokens);
+        let node = expr(tokens, vars);
         expect(tokens, ")");
 
         return node;
     }
+
     let offset = consume_ident(tokens);
-    if offset.0 {
-        let offset = Some(
-            ((offset.1.unwrap().chars().collect::<Vec<char>>()[0] as u8 - 'a' as u8 + 1) * 8)
-                .into(),
-        );
-        return Box::new(Node::new(NodeKind::NdLVar, None, None, None, offset));
+    if offset.is_some() {
+        match LVar::find(offset.clone().unwrap(), vars.to_vec()) {
+            Some(var) => {
+                return Box::new(Node::new(
+                    NodeKind::NdLVar,
+                    None,
+                    None,
+                    None,
+                    Some(var.offset),
+                ));
+            }
+            None => {
+                if vars.len() != 0 {
+                    let next_offset = vars[vars.len() - 1].offset + 8;
+                    vars.push(LVar::new(offset.clone().unwrap(), next_offset));
+                    return Box::new(Node::new(
+                        NodeKind::NdLVar,
+                        None,
+                        None,
+                        None,
+                        Some(next_offset),
+                    ));
+                } else {
+                    let next_offset = 8;
+                    vars.push(LVar::new(offset.clone().unwrap(), next_offset));
+                    return Box::new(Node::new(
+                        NodeKind::NdLVar,
+                        None,
+                        None,
+                        None,
+                        Some(next_offset),
+                    ));
+                }
+            }
+        }
     } else {
         return Box::new(Node::new(
             NodeKind::NdNum,

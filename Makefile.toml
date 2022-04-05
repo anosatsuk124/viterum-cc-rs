@@ -36,6 +36,11 @@ script = '''
                     y = 4;
                     x + y + 2;
                     """
+    ./debug.sh 9 """
+                    xy = 3;
+                    yx = 4;
+                    xy + yx + 2;
+                    """
 '''
 dependencies = [ "build" ]
 

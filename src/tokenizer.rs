@@ -53,8 +53,18 @@ impl Token {
                     continue;
                 }
                 asc if asc.is_ascii_alphabetic() => {
-                    let var = c.to_string().clone();
+                    let mut var = String::new();
+                    var.push(asc.clone());
                     p.next();
+                    while let Some(next_asc) = p.peek() {
+                        if next_asc.is_ascii_alphabetic() {
+                            var.push(next_asc.clone());
+                            p.next();
+                        } else {
+                            break;
+                        }
+                    }
+
                     cur = Token::push(TokenKind::TkIdent, None, Some(var), &mut cur);
 
                     continue;
@@ -103,12 +113,12 @@ impl Token {
     }
 }
 
-pub fn consume_ident(tokens: &mut Vec<Token>) -> (bool, Option<String>) {
+pub fn consume_ident(tokens: &mut Vec<Token>) -> Option<String> {
     if tokens[tokens.len() - 1].kind != TokenKind::TkIdent {
-        return (false, None);
+        return None;
     }
 
-    (true, tokens.pop().unwrap().op)
+    tokens.pop().unwrap().op
 }
 
 pub fn consume(tokens: &mut Vec<Token>, op: &str) -> bool {

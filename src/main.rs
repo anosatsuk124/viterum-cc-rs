@@ -20,7 +20,8 @@ fn main() {
     }
 
     let mut tokens = tokenizer::Token::tokenize(input.chars().collect());
-    let nodes = parser::program(&mut tokens);
+    let mut varibles: Vec<parser::LVar> = Vec::new();
+    let nodes = parser::program(&mut tokens, &mut varibles);
 
     println!(".intel_syntax noprefix");
     println!(".globl main");
