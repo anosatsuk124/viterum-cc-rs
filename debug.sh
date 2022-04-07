@@ -8,7 +8,8 @@ fi
 
 echo "$input" | ./target/release/viterum-cc-rs > ./tmp/tmp.S
 
-cc -o ./tmp/tmp ./tmp/tmp.S
+as -o ./tmp/tmp.o ./tmp/tmp.S
+ld -o ./tmp/tmp ./tmp/tmp.o
 
 ./tmp/tmp
 actual="$?"

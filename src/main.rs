@@ -24,8 +24,8 @@ fn main() {
     let nodes = parser::program(&mut tokens, &mut varibles);
 
     println!(".intel_syntax noprefix");
-    println!(".globl main");
-    println!("main:");
+    println!(".globl _start");
+    println!("_start:");
 
     // prologue
     println!("  push rbp");
@@ -41,5 +41,7 @@ fn main() {
     // epilogue
     println!("  mov rsp, rbp");
     println!("  pop rbp");
-    println!("  ret");
+    println!("  mov rbx, rax");
+    println!("  mov rax, 1");
+    println!("  int 0x80");
 }
